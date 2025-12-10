@@ -50,9 +50,19 @@ bool Game::init() {
             "3. Se pierde una vida cuando se dispara al aire.\n";
         instructionsText_.reset(new sf::Text(instr, font_, 20));
         instructionsText_->setFillColor(sf::Color::White);
+        // add a black outline to improve readability over the background
+        instructionsText_->setOutlineColor(sf::Color::Black);
+        instructionsText_->setOutlineThickness(2.f);
         sf::FloatRect b = instructionsText_->getLocalBounds();
         instructionsText_->setOrigin(b.left + b.width / 2.f, b.top + b.height / 2.f);
         instructionsText_->setPosition(window_.getSize().x / 2.f, window_.getSize().y / 2.f);
+        // prepare the game title to display above the instructions
+        titleText_.reset(new sf::Text(std::string("DUCK HUNT"), font_, 64));
+        titleText_->setFillColor(sf::Color(255, 215, 0));
+        titleText_->setStyle(sf::Text::Bold);
+        sf::FloatRect tb = titleText_->getLocalBounds();
+        titleText_->setOrigin(tb.left + tb.width / 2.f, tb.top + tb.height / 2.f);
+        titleText_->setPosition(window_.getSize().x / 2.f, 60.f);
     }
 
     // try to load pond background for instruction screen
@@ -285,6 +295,7 @@ void Game::ShowInstructions(float seconds) {
 
         window_.clear(sf::Color::Black);
         if (pondLoaded_) window_.draw(pondSprite_);
+        if (titleText_) window_.draw(*titleText_);
         if (instructionsText_) window_.draw(*instructionsText_);
         window_.display();
 

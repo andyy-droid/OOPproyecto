@@ -50,6 +50,7 @@ private:
     std::unique_ptr<sf::Text> scoreText_;
     std::unique_ptr<sf::Text> livesText_;
     std::unique_ptr<sf::Text> instructionsText_;
+    std::unique_ptr<sf::Text> titleText_;
     sf::Music duckMusic;
     // Background pond image for instruction screen
     sf::Texture pondTexture_;

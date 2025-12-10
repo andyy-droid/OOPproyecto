@@ -2,6 +2,7 @@
 #define GAME_H
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <vector>
 #include <memory>
 #include <string>
@@ -24,6 +25,11 @@ private:
     void update(float dt);
     void render();
 
+    // Show game over screen
+    void ShowGameOver();
+    // Show instructions before starting the round
+    void ShowInstructions(float seconds = 7.f);
+
     // Spawn helper
     void spawnDuck();
 
@@ -34,13 +40,21 @@ private:
 
     // Game state
     int score_ = 0;
-    int ammo_ = 3;
+    int playerLives_ = 3;
+    bool gameOver_ = false;
     std::vector<std::unique_ptr<Duck>> ducks_;
 
     // Resources
     sf::Font font_;
+    bool fontLoaded_ = false;
     std::unique_ptr<sf::Text> scoreText_;
-    std::unique_ptr<sf::Text> ammoText_;
+    std::unique_ptr<sf::Text> livesText_;
+    std::unique_ptr<sf::Text> instructionsText_;
+    sf::Music duckMusic;
+    // Background pond image for instruction screen
+    sf::Texture pondTexture_;
+    sf::Sprite pondSprite_;
+    bool pondLoaded_ = false;
 
     // Timing
     sf::Clock clock_;

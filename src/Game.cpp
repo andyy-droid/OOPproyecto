@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <random>
 #include <iostream>
+#include <SFML/Audio.hpp>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -17,7 +18,7 @@ static float randRange(float a, float b) {
 
 Game::Game(unsigned int width, unsigned int height, const std::string& title)
     : width_(width), height_(height), title_(title) {
-    window_.create(sf::VideoMode(sf::Vector2u(width_, height_)), title_);
+    window_.create(sf::VideoMode(width_, height_), title_);
     window_.setFramerateLimit(60);
 }
 
@@ -27,21 +28,63 @@ Game::~Game() {
 
 bool Game::init() {
     // Load font (fallback to built-in if missing)
-    if (!font_.openFromFile("./assets/fonts/Minecraft.ttf")) {
+    if (!font_.loadFromFile("./assets/fonts/Minecraft.ttf")) {
         std::cerr << "Warning: failed to open font './assets/fonts/Minecraft.ttf'\n";
-        // We continue but text might not render as intended.
+        fontLoaded_ = false;
+    } else {
+        fontLoaded_ = true;
     }
 
-    scoreText_.reset(new sf::Text(font_, std::string("Score: 0"), 24));
+    scoreText_.reset(new sf::Text(std::string("Score: 0"), font_, 24));
     scoreText_->setFillColor(sf::Color::White);
     scoreText_->setPosition({10.f, 10.f});
 
-    ammoText_.reset(new sf::Text(font_, std::string("Ammo: 3"), 24));
-    ammoText_->setFillColor(sf::Color::White);
-    ammoText_->setPosition({10.f, 40.f});
+    livesText_.reset(new sf::Text(std::string("Lives: 3"), font_, 24));
+    livesText_->setFillColor(sf::Color::White);
+    livesText_->setPosition({10.f, 40.f});
+    // prepare instructions text (shown before ducks spawn)
+    if (fontLoaded_) {
+        std::string instr = "INSTRUCCIONES:\n"
+            "1. Posicionar el cursor sobre un pato y dar clic izquierdo para disparar.\n"
+            "2. Se cuentan con 3 vidas en total.\n"
+            "3. Se pierde una vida cuando se dispara al aire.\n";
+        instructionsText_.reset(new sf::Text(instr, font_, 20));
+        instructionsText_->setFillColor(sf::Color::White);
+        sf::FloatRect b = instructionsText_->getLocalBounds();
+        instructionsText_->setOrigin(b.left + b.width / 2.f, b.top + b.height / 2.f);
+        instructionsText_->setPosition(window_.getSize().x / 2.f, window_.getSize().y / 2.f);
+    }
 
-    // Spawn a couple of ducks to start
+    // try to load pond background for instruction screen
+    if (pondTexture_.loadFromFile("./assets/images/duck_pond.png")) {
+        pondSprite_.setTexture(pondTexture_);
+        // scale to window size
+        auto tsize = pondTexture_.getSize();
+        if (tsize.x > 0 && tsize.y > 0) {
+            float sx = static_cast<float>(width_) / static_cast<float>(tsize.x);
+            float sy = static_cast<float>(height_) / static_cast<float>(tsize.y);
+            pondSprite_.setScale(sx, sy);
+        }
+        pondLoaded_ = true;
+    } else {
+        pondLoaded_ = false;
+        std::cerr << "Warning: could not load './assets/images/duck_pond.png'\n";
+    }
+
+    // Show instructions first (blocks input except window close)
+    ShowInstructions(10.f);
+
+    // Spawn a couple of ducks to start (after instructions)
     for (int i = 0; i < 2; ++i) spawnDuck();
+
+    // Load and play duck background music (best-effort). File: assets/music/duck.mp3
+    if (duckMusic.openFromFile("./assets/music/duck.mp3")) {
+        duckMusic.setLoop(true);
+        duckMusic.setVolume(60.f);
+        duckMusic.play();
+    } else {
+        std::cerr << "Warning: could not open music './assets/music/duck.mp3'\n";
+    }
 
     running_ = true;
     clock_.restart();
@@ -50,12 +93,16 @@ bool Game::init() {
 
 void Game::run() {
     if (!running_) init();
-
-    while (window_.isOpen()) {
+    while (window_.isOpen() && !gameOver_) {
         float dt = clock_.restart().asSeconds();
         handleInput();
         update(dt);
         render();
+    }
+
+    // If the game ended because lives reached 0, show GAME OVER screen
+    if (gameOver_) {
+        ShowGameOver();
     }
 }
 
@@ -77,42 +124,54 @@ void Game::handleInput() {
     }
     #endif
 
-    // Consume any SFML events to keep the window responsive
-    while (true) {
-        auto evOpt = window_.pollEvent();
-        if (!evOpt) break;
-        // we don't inspect the variant here; native pump handles WM_CLOSE
-    }
+    // Poll SFML events and handle input
+    sf::Event event;
+    // if game over, ignore additional input
+    if (gameOver_) return;
 
-    // Close on Escape
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape)) {
-        window_.close();
-        return;
-    }
+    while (window_.pollEvent(event)) {
+        if (event.type == sf::Event::Closed) {
+            window_.close();
+            return;
+        }
+        if (event.type == sf::Event::KeyPressed) {
+            if (event.key.code == sf::Keyboard::Escape) {
+                window_.close();
+                return;
+            }
+        }
+        if (event.type == sf::Event::MouseButtonPressed) {
+            if (event.mouseButton.button == sf::Mouse::Left) {
+                sf::Vector2i pixelPos(event.mouseButton.x, event.mouseButton.y);
+                sf::Vector2f worldPos = window_.mapPixelToCoords(pixelPos);
 
-    static bool lastMousePressed = false;
-    bool mousePressed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-    if (mousePressed && !lastMousePressed) {
-        sf::Vector2i pixelPos = sf::Mouse::getPosition(window_);
-        sf::Vector2f worldPos = window_.mapPixelToCoords(pixelPos);
+                // Check ducks for hit
+                bool anyHit = false;
+                for (auto& dptr : ducks_) {
+                    if (!dptr) continue;
+                    if (!dptr->isAlive()) continue;
+                    if (dptr->isFalling()) continue;
 
-        // Reduce ammo per click
-        if (ammo_ > 0) ammo_--; else ammo_ = 0;
+                    if (dptr->getBounds().contains(worldPos)) {
+                        dptr->onShot();
+                        score_ += 100; // simple score rule
+                        anyHit = true;
+                        break; // only one duck per click
+                    }
+                }
 
-        // Check ducks for hit
-        for (auto& dptr : ducks_) {
-            if (!dptr) continue;
-            if (!dptr->isAlive()) continue;
-            if (dptr->isFalling()) continue;
-
-            if (dptr->getBounds().contains(worldPos)) {
-                dptr->onShot();
-                score_ += 100; // simple score rule
-                break; // only one duck per click
+                if (!anyHit) {
+                    playerLives_ -= 1;
+                    if (playerLives_ <= 0) {
+                        playerLives_ = 0;
+                        gameOver_ = true;
+                        // stop music optionally
+                        if (duckMusic.getStatus() == sf::Music::Playing) duckMusic.stop();
+                    }
+                }
             }
         }
     }
-    lastMousePressed = mousePressed;
 }
 
 void Game::update(float dt) {
@@ -135,7 +194,8 @@ void Game::update(float dt) {
 
     // Update HUD texts
     if (scoreText_) scoreText_->setString(std::string("Score: ") + std::to_string(score_));
-    if (ammoText_) ammoText_->setString(std::string("Ammo: ") + std::to_string(ammo_));
+    //if (ammoText_) ammoText_->setString(std::string("Ammo: ") + std::to_string(ammo_));
+    if (livesText_) livesText_->setString(std::string("Lives: ") + std::to_string(playerLives_));
 }
 
 void Game::render() {
@@ -153,7 +213,8 @@ void Game::render() {
 
     // Draw HUD
     if (scoreText_) window_.draw(*scoreText_);
-    if (ammoText_) window_.draw(*ammoText_);
+    //if (ammoText_) window_.draw(*ammoText_);
+    if (livesText_) window_.draw(*livesText_);
 
     window_.display();
 }
@@ -170,3 +231,64 @@ void Game::spawnDuck() {
 
     ducks_.push_back(std::make_unique<Duck>(sf::Vector2f(x, y), window_.getSize()));
 }
+
+// After the main loop, if the player lost all lives show GAME OVER
+// This renders a full-screen message for 2 seconds.
+void Game::ShowGameOver() {
+    if (!fontLoaded_) {
+        window_.clear(sf::Color::Black);
+        window_.display();
+        sf::sleep(sf::seconds(2.f));
+        return;
+    }
+
+    sf::Text goText("GAME OVER", font_, 72);
+    goText.setFillColor(sf::Color::Red);
+    auto bounds = goText.getLocalBounds();
+    goText.setOrigin(bounds.width/2.f, bounds.height/2.f);
+    goText.setPosition(static_cast<float>(width_)/2.f, static_cast<float>(height_)/2.f - 20.f);
+
+    window_.clear(sf::Color::Black);
+    window_.draw(goText);
+    window_.display();
+    sf::sleep(sf::seconds(3.f));
+
+}
+
+void Game::ShowInstructions(float seconds) {
+    if (!fontLoaded_) {
+        // keep window responsive to close events, but otherwise wait
+        sf::Clock c;
+        while (c.getElapsedTime().asSeconds() < seconds) {
+            sf::Event e;
+            while (window_.pollEvent(e)) {
+                if (e.type == sf::Event::Closed) {
+                    window_.close();
+                    return;
+                }
+            }
+            sf::sleep(sf::milliseconds(50));
+        }
+        return;
+    }
+
+    sf::Clock timer;
+    while (timer.getElapsedTime().asSeconds() < seconds) {
+        sf::Event event;
+        while (window_.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window_.close();
+                return;
+            }
+            // ignore other inputs while instructions are shown
+        }
+
+        window_.clear(sf::Color::Black);
+        if (pondLoaded_) window_.draw(pondSprite_);
+        if (instructionsText_) window_.draw(*instructionsText_);
+        window_.display();
+
+        sf::sleep(sf::milliseconds(16));
+    }
+}
+

@@ -1,42 +1,57 @@
-# Directorios de origen y destino
+## Makefile - build DuckHunt with SFML (uses pkg-config when available)
+
 SRC_DIR := src
 BIN_DIR := bin
+OBJ_DIR := build
 
-SFML := -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio -lbox2d
+ifeq ($(OS),Windows_NT)
+EXE_EXT := .exe
+else
+EXE_EXT :=
+endif
 
-# Obtener todos los archivos .cpp en el directorio de origen
-CPP_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+EXE := $(BIN_DIR)/DuckHunt$(EXE_EXT)
 
-# Generar los nombres de los archivos .exe en el directorio de destino
-EXE_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(BIN_DIR)/%.exe,$(CPP_FILES))
+CXX := g++
+CXXFLAGS := -std=c++17 -O2 -Iinclude
 
-# Regla para compilar cada archivo .cpp y generar el archivo .exe correspondiente
-$(BIN_DIR)/%.exe: $(SRC_DIR)/%.cpp
-	g++ $< -o $@ $(SFML) -Iinclude
+PKG_CONFIG := pkg-config
+PKG_SFML_ALL := $(shell $(PKG_CONFIG) --cflags --libs sfml-all 2>/dev/null)
+ifeq ($(PKG_SFML_ALL),)
+SFML_CFLAGS := $(shell $(PKG_CONFIG) --cflags sfml-graphics 2>/dev/null)
+SFML_LIBS := $(shell $(PKG_CONFIG) --libs sfml-graphics 2>/dev/null) $(shell $(PKG_CONFIG) --libs sfml-audio 2>/dev/null)
+else
+SFML_CFLAGS := $(shell $(PKG_CONFIG) --cflags sfml-all)
+SFML_LIBS := $(shell $(PKG_CONFIG) --libs sfml-all)
+endif
 
-# Regla por defecto para compilar todos los archivos .cpp
-all: $(EXE_FILES)
+SRCS := $(SRC_DIR)/main.cpp $(SRC_DIR)/Game.cpp $(SRC_DIR)/Duck.cpp
+OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
-# Explicit DuckHunt target (build only our new game sources)
-$(BIN_DIR)/DuckHunt.exe: $(SRC_DIR)/main.cpp $(SRC_DIR)/Game.cpp $(SRC_DIR)/Duck.cpp
-	g++ $^ -o $@ $(SFML) -Iinclude
+all: directories $(EXE)
 
-.PHONY: duckhunt
-duckhunt: $(BIN_DIR)/DuckHunt.exe
-	@echo "Built DuckHunt.exe -> $(BIN_DIR)/DuckHunt.exe"
+directories:
+	@mkdir -p $(BIN_DIR) $(OBJ_DIR)
 
-# Regla para ejecutar cada archivo .exe
-run%: $(BIN_DIR)/%.exe
-	./$<
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | directories
+	$(CXX) $(CXXFLAGS) $(SFML_CFLAGS) -c $< -o $@
 
-# Regla para limpiar los archivos generados
+$(EXE): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(SFML_LIBS)
+
+# make run should build first, then run the exe. Works in MSYS/MinGW and Unix shells.
+run: all
+	@echo "Running $(EXE)"
+	@$(EXE)
+
 clean:
-	rm -f $(EXE_FILES)
+	-rm -rf $(OBJ_DIR) $(EXE)
 
-.PHONY: all clean
-.PHONY: run-%
+.PHONY: all run clean directories
 
-# Shortcut to run DuckHunt
-.PHONY: runduckhunt
-runduckhunt: $(BIN_DIR)/DuckHunt.exe
-	./$(BIN_DIR)/DuckHunt.exe
+# Notes:
+# - This Makefile prefers pkg-config to locate SFML. If pkg-config is not available,
+#   set `SFML_CFLAGS` and `SFML_LIBS` manually near the top of the file, for example:
+#     SFML_CFLAGS := -I/mingw64/include
+#     SFML_LIBS   := -L/mingw64/lib -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
+# - On MSYS2 install SFML packages: pacman -S mingw-w64-x86_64-SFML

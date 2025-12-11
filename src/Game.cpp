@@ -57,12 +57,22 @@ bool Game::init() {
         instructionsText_->setOrigin(b.left + b.width / 2.f, b.top + b.height / 2.f);
         instructionsText_->setPosition(window_.getSize().x / 2.f, window_.getSize().y / 2.f);
         // prepare the game title to display above the instructions
-        titleText_.reset(new sf::Text(std::string("DUCK HUNT"), font_, 64));
+        titleText_.reset(new sf::Text(std::string("SHOOTING DUCKS"), font_, 64));
         titleText_->setFillColor(sf::Color(255, 215, 0));
         titleText_->setStyle(sf::Text::Bold);
         sf::FloatRect tb = titleText_->getLocalBounds();
         titleText_->setOrigin(tb.left + tb.width / 2.f, tb.top + tb.height / 2.f);
         titleText_->setPosition(window_.getSize().x / 2.f, 60.f);
+        // prepare a loading text centered below the instructions
+        loadingText_.reset(new sf::Text(std::string("CARGANDO..."), font_, 20));
+        loadingText_->setFillColor(sf::Color::White);
+        loadingText_->setOutlineColor(sf::Color::Black);
+        loadingText_->setOutlineThickness(2.f);
+        sf::FloatRect lb = loadingText_->getLocalBounds();
+        loadingText_->setOrigin(lb.left + lb.width / 2.f, lb.top + lb.height / 2.f);
+        // place it below instructions: use instructions center Y + half height + padding
+        float padding = 18.f;
+        loadingText_->setPosition(window_.getSize().x / 2.f, window_.getSize().y / 2.f + (b.height / 2.f) + padding + (lb.height / 2.f));
     }
 
     // try to load pond background for instruction screen
@@ -297,6 +307,7 @@ void Game::ShowInstructions(float seconds) {
         if (pondLoaded_) window_.draw(pondSprite_);
         if (titleText_) window_.draw(*titleText_);
         if (instructionsText_) window_.draw(*instructionsText_);
+        if (loadingText_) window_.draw(*loadingText_);
         window_.display();
 
         sf::sleep(sf::milliseconds(16));

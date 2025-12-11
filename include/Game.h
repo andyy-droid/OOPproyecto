@@ -10,7 +10,7 @@
 
 class Game {
 public:
-    Game(unsigned int width = 800, unsigned int height = 600, const std::string& title = "Duck Hunt");
+    Game(unsigned int width = 800, unsigned int height = 600, const std::string& title = "SHOOTING DUCKS");
     ~Game();
 
     // Initialize resources. Returns false if initialization fails.
@@ -51,6 +51,7 @@ private:
     std::unique_ptr<sf::Text> livesText_;
     std::unique_ptr<sf::Text> instructionsText_;
     std::unique_ptr<sf::Text> titleText_;
+    std::unique_ptr<sf::Text> loadingText_;
     sf::Music duckMusic;
     // Background pond image for instruction screen
     sf::Texture pondTexture_;

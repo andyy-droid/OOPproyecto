@@ -1,43 +1,37 @@
-# EjemplosJuego
+Shooting Ducks
 
-El proyecto esta desarrollado sobre MinGW64 utilizando Msys2
-y como editor se esta utilizando Visual Studio Code.
+### 🎯 Objetivo del Juego
 
-## Prerequisitos
+El objetivo del juego es dispararle a la mayor cantidad de patos que irán apareciendo y lograr el mayor puntaje.
 
-[Instalar las herramientas necesarias](./docs/herramientas.md)
+### 🎮 Controles
 
-[Instalar las Extensiones VSCode](./docs/extensiones.md)
+Lista los controles:
+- Mouse: Apuntar/Disparar
+- Esc: Cerrar la ventana de juego
 
-[Instalar las librerias](./docs/librerias.md)
+### ⚙️ Mecánicas
 
-[Clonar el repositorio](./docs/fork.md)
+Al inicio del juego cuentas con 3 vidas, estas te permiten seguir jugando, apuntando y disparando a los patos, pero en el momento en que empieces a fallar tiros, se te irán restando vidas, hasta que se terminen todas y pierdas el juego.
 
-## Como ejecutar los ejemplos
+### 🏆 Características
 
-Instalar todas las dependencias descritas arriba y dentro de una terminal de vscode ejecutar:
+- Feature 1
+- Feature 2
+- Feature 3
 
-> make run'NombreEjecutable'
+### 👥 Equipo
 
-Por ejemplo para ejecutar '00_Ventana.cpp' correr el comando en la terminal de vscode:
+- **Líder**: Andrea Carolina Ruvalcaba Del Castillo  (@andyy-droid)
+- **Integrante 2**: Felix Eduardo De León Torres (@Logibroneo)
 
-> make run00_Ventana
+### 🛠️ Tecnologías
 
-## Errores comunes
-- [Los diagramas de PUML no se visualizan bien]()
+- Motor/Framework: SFML
+- Lenguaje: C++
 
-## Buenas Practicas
-- [Como Crear un buen readme](https://www.makeareadme.com/)
-- [Patrones de diseño](https://refactoring.guru/es/design-patterns)
-- [Como hacer commits semanticos]()
-- [Como estructurar un proyecto]()
-- [Que tipos de licencias existen]()
+### 📜 Créditos
 
-## Tutoriales Github
-- [Creacion de un repositorio]()
-- [Como colaborar en un proyecto]()
-- [Solicitar developer pack]()
+- Este juego fue impulaso en su mayoria con uso de IA.
 
-## Recursos Gratis
-- [Fuentes de texto gratis](https://www.dafont.com/es/)
-- [Recursos gratis de Videojuegos](https://opengameart.org/)
+--- 

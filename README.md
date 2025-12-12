@@ -14,12 +14,6 @@ Lista los controles:
 
 Al inicio del juego cuentas con 3 vidas, estas te permiten seguir jugando, apuntando y disparando a los patos, pero en el momento en que empieces a fallar tiros, se te irán restando vidas, hasta que se terminen todas y pierdas el juego.
 
-### 🏆 Características
-
-- Feature 1
-- Feature 2
-- Feature 3
-
 ### 👥 Equipo
 
 - **Líder**: Andrea Carolina Ruvalcaba Del Castillo  (@andyy-droid)
@@ -33,5 +27,5 @@ Al inicio del juego cuentas con 3 vidas, estas te permiten seguir jugando, apunt
 ### 📜 Créditos
 
 - Este juego fue impulaso en su mayoria con uso de IA.
-
+- Usamos como base los juegos de ejemplo que el profesor nos dio.
 --- 

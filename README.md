@@ -1,4 +1,4 @@
-Shooting Ducks
+### Shooting Ducks 🦆🦆🔫🔫
 
 ### 🎯 Objetivo del Juego
 
